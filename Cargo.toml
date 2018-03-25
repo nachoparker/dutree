@@ -1,0 +1,10 @@
+[package]
+name = "dutree"
+version = "0.1.0"
+authors = ["nacho <nacho.nunez@aoifes.com>"]
+
+[dependencies]
+getopts = "0.2"
+terminal_size= { git = "https://github.com/eminence/terminal-size.git" }
+regex = "0.2"
+unicode-width = "0.1.1"

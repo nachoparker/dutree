@@ -1,3 +1,35 @@
+///
+///  - dutree lib -
+/// 
+/// Simple command to analyse disk usage from the terminal
+///
+/// Usage:
+///  btrfs-sync [options] <src> [<src>...] [[user@]host:]<dir>
+///
+///  -k|--keep NUM     keep only last <NUM> sync'ed snapshots
+///  -d|--delete       delete snapshots in <dst> that don't exist in <src>
+///  -z|--xz           use xz     compression. Saves bandwidth, but uses one CPU
+///  -Z|--pbzip2       use pbzip2 compression. Saves bandwidth, but uses all CPUs
+///  -q|--quiet        don't display progress
+///  -v|--verbose      display more information
+///  -h|--help         show usage
+///
+/// <src> can either be a single snapshot, or a folder containing snapshots
+/// <user> requires privileged permissions at <host> for the 'btrfs' command
+///
+/// Cron example: daily synchronization over the internet, keep only last 50
+///
+/// cat > /etc/cron.daily/btrfs-sync <<EOF
+/// #!/bin/bash
+/// /usr/local/sbin/btrfs-sync -q -k50 -z /home user@host:/path/to/snaps
+/// EOF
+/// chmod +x /etc/cron.daily/btrfs-sync
+///
+/// Copyleft 2018 by Ignacio Nunez Hernanz <nacho _a_t_ ownyourbits _d_o_t_ com>
+/// GPL licensed (see end of file) * Use at your own risk!
+///
+/// More at https://ownyourbits.com
+///
 extern crate getopts;
 extern crate terminal_size;
 extern crate regex;
@@ -12,7 +44,7 @@ use regex::Regex;
 use std::os::linux::fs::MetadataExt;
 use std::env;
 
-const VERSTR    : &str = "v0.1.0";
+const VERSTR    : &str = "v0.2.0";
 const DEF_WIDTH : u16  = 80;
 
 pub enum XResult<T,S> {
@@ -39,6 +71,7 @@ pub struct Config {
     usage_flag  : bool,
     hiddn_flag  : bool,
     ascii_flag  : bool,
+    no_dir_flg  : bool,
     aggr        : u64,
     exclude     : Vec<String>,
 }
@@ -53,6 +86,7 @@ fn init_opts() -> Options {
     options.optflag(    "s", "summary"  , "equivalent to -da, or -d1 -a1M" );
     options.optflag(    "u", "usage"    , "report real disk usage instead of file size");
     options.optflag(    "b", "bytes"    , "print sizes in bytes" );
+    options.optflag(    "f", "files-only","skip directories for a fast local overview" );
     options.optmulti(   "x", "exclude"  , "exclude matching files or directories", "NAME");
     options.optflag(    "H", "no-hidden", "exclude hidden files" );
     options.optflag(    "A", "ascii"    , "ASCII characters only, no colors" );
@@ -111,6 +145,7 @@ impl Config {
         let usage_flag = opt.opt_present("u");
         let hiddn_flag = opt.opt_present("H");
         let ascii_flag = opt.opt_present("A");
+        let no_dir_flg = opt.opt_present("f");
 
         let mut aggr = if opt.opt_present("a") {
             let aggr_opt = opt.opt_str("a");
@@ -146,7 +181,7 @@ impl Config {
         }
 
         XOk( Config{ paths, color_dict, depth, depth_flag, bytes_flag, 
-            usage_flag, hiddn_flag, ascii_flag,  aggr, exclude } )
+            usage_flag, hiddn_flag, ascii_flag, no_dir_flg,  aggr, exclude } )
     }
 }
 
@@ -220,8 +255,12 @@ impl Entry {
                 for entry in dir_list {
                     if let Some( path ) = path_from_dentry( entry ) {
                         let entry_name = &file_name_from_path(&path);
+
+                        // argument filters
                         if cfg.exclude.iter().any( |p| entry_name == p ){ continue }
                         if cfg.hiddn_flag && &entry_name[..1] == "."    { continue }
+                        if cfg.no_dir_flg && path.is_dir()              { continue }
+
                         let entry = Entry::new( &path.as_path(), cfg, depth );
                         if cfg.aggr > 0 && entry.bytes < cfg.aggr {
                             aggr_bytes += entry.bytes;
@@ -578,3 +617,19 @@ mod tests {
     }
     */
 }
+
+// License
+//
+// This script is free software; you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This script is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this script; if not, write to the
+// Free Software Foundation, Inc., 59 Temple Place, Suite 330,

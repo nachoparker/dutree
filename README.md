@@ -35,7 +35,7 @@ Options:
 # Installation
 
 ```
-cargo install --git https://github.com/nachoparker/dutree.git
+cargo install dutree
 ```
 
 More details at [ownyourbits.com](https://ownyourbits.com/2018/03/25/analize-disk-usage-with-dutree)

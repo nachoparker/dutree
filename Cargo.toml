@@ -1,11 +1,17 @@
 [package]
 name = "dutree"
-version = "0.2.1"
+version = "0.2.3"
 authors = ["nacho <nacho@ownyourbits.com>"]
+description = "Command line tool to analyze disk usage"
+repository = "https://github.com/nachoparker/dutree"
+categories = ["command-line-utilities"]
+license = "GPL-3.0"
+homepage = "https://ownyourbits.com/2018/03/25/analize-disk-usage-with-dutree/"
+exclude = ["test/*"]
 
 [dependencies]
 dict = "0.1.1"
 getopts = "0.2"
-terminal_size= { git = "https://github.com/eminence/terminal-size.git" }
+terminal_size = "0.1.7"
 regex = "0.2"
 unicode-width = "0.1.1"

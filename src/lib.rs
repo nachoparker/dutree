@@ -1,35 +1,38 @@
-///
-///  - dutree lib -
-/// 
-/// Simple command to analyse disk usage from the terminal
-///
-/// Usage:
-///  btrfs-sync [options] <src> [<src>...] [[user@]host:]<dir>
-///
-///  -k|--keep NUM     keep only last <NUM> sync'ed snapshots
-///  -d|--delete       delete snapshots in <dst> that don't exist in <src>
-///  -z|--xz           use xz     compression. Saves bandwidth, but uses one CPU
-///  -Z|--pbzip2       use pbzip2 compression. Saves bandwidth, but uses all CPUs
-///  -q|--quiet        don't display progress
-///  -v|--verbose      display more information
-///  -h|--help         show usage
-///
-/// <src> can either be a single snapshot, or a folder containing snapshots
-/// <user> requires privileged permissions at <host> for the 'btrfs' command
-///
-/// Cron example: daily synchronization over the internet, keep only last 50
-///
-/// cat > /etc/cron.daily/btrfs-sync <<EOF
-/// #!/bin/bash
-/// /usr/local/sbin/btrfs-sync -q -k50 -z /home user@host:/path/to/snaps
-/// EOF
-/// chmod +x /etc/cron.daily/btrfs-sync
-///
-/// Copyleft 2018 by Ignacio Nunez Hernanz <nacho _a_t_ ownyourbits _d_o_t_ com>
-/// GPL licensed (see end of file) * Use at your own risk!
-///
-/// More at https://ownyourbits.com
-///
+//!
+//! Simple command line tool to analyse disk usage from the terminal
+//!
+//! # Usage
+//!
+//! ```text
+//! $ dutree --help
+//! Usage: dutree [options] <path> [<path>..]
+//!
+//! Options:
+//!     -d, --depth [DEPTH] show directories up to depth N (def 1)
+//!     -a, --aggr [N[KMG]] aggregate smaller than N B/KiB/MiB/GiB (def 1M)
+//!     -s, --summary       equivalent to -da, or -d1 -a1M
+//!     -u, --usage         report real disk usage instead of file size
+//!     -b, --bytes         print sizes in bytes
+//!     -x, --exclude NAME  exclude matching files or directories
+//!     -H, --no-hidden     exclude hidden files
+//!     -A, --ascii         ASCII characters only, no colors
+//!     -h, --help          show help
+//!     -v, --version       print version number
+//! ```
+//! # Screenshot
+//!
+//! ![dutree](https://ownyourbits.com/wp-content/uploads/2018/03/dutree-featured2.png)
+//!
+//! # More information
+//!
+//! Copyleft 2018 by Ignacio Nunez Hernanz - nacho _at_ ownyourbits _dot_ com
+//!
+//! GPL licensed
+//!
+//! More at [ownyourbits.com](https://ownyourbits.com/2018/03/25/analize-disk-usage-with-dutree)
+//!
+//! [github](https://github.com/nachoparker/dutree)
+//!
 
 extern crate unicode_width;
 

@@ -30,17 +30,24 @@
 ///
 /// More at https://ownyourbits.com
 ///
-extern crate getopts;
-extern crate terminal_size;
-extern crate regex;
+
 extern crate unicode_width;
 
+extern crate getopts;
 use getopts::Options;
+
+extern crate terminal_size;
+use terminal_size::{Width, Height, terminal_size};
+
+extern crate regex;
+use regex::Regex;
+
+extern crate dict;
+use dict::{ Dict, DictIface };
+
 use std::io;
 use std::path::{Path, PathBuf};
 use std::fs;
-use terminal_size::{Width, Height, terminal_size};
-use regex::Regex;
 use std::os::linux::fs::MetadataExt;
 use std::env;
 
@@ -57,14 +64,14 @@ use XResult::{XOk, XExit, XErr};
 struct Entry {
     name    : String,
     bytes   : u64,
-    color   : Option<String>,
+    color   : Option<String>, // TODO reference
     last    : bool,
     entries : Option<Vec<Entry>>,
 }
 
 pub struct Config {
     paths       : Vec<PathBuf>,
-    color_dict  : Vec<DictEntry>,
+    color_dict  : Dict<String>,
     depth       : u8,
     depth_flag  : bool,
     bytes_flag  : bool,
@@ -76,22 +83,22 @@ pub struct Config {
     exclude     : Vec<String>,
 }
 
-struct DictEntry { key : String, val : String }
+//struct DictEntry { key : String, val : String }
 
 fn init_opts() -> Options {
     let mut options = Options::new();
 
     options.optflagopt( "d", "depth"    , "show directories up to depth N (def 1)", "DEPTH" );
     options.optflagopt( "a", "aggr"     , "aggregate smaller than N B/KiB/MiB/GiB (def 1M)", "N[KMG]");
-    options.optflag(    "s", "summary"  , "equivalent to -da, or -d1 -a1M" );
-    options.optflag(    "u", "usage"    , "report real disk usage instead of file size");
-    options.optflag(    "b", "bytes"    , "print sizes in bytes" );
-    options.optflag(    "f", "files-only","skip directories for a fast local overview" );
-    options.optmulti(   "x", "exclude"  , "exclude matching files or directories", "NAME");
-    options.optflag(    "H", "no-hidden", "exclude hidden files" );
-    options.optflag(    "A", "ascii"    , "ASCII characters only, no colors" );
-    options.optflag(    "h", "help"     , "show help"            );
-    options.optflag(    "v", "version"  , "print version number" );
+    options.optflag(    "s", "summary"  , "equivalent to -da, or -d1 -a1M"                );
+    options.optflag(    "u", "usage"    , "report real disk usage instead of file size"   );
+    options.optflag(    "b", "bytes"    , "print sizes in bytes"                          );
+    options.optflag(    "f", "files-only","skip directories for a fast local overview"    );
+    options.optmulti(   "x", "exclude"  , "exclude matching files or directories", "NAME" );
+    options.optflag(    "H", "no-hidden", "exclude hidden files"                          );
+    options.optflag(    "A", "ascii"    , "ASCII characters only, no colors"              );
+    options.optflag(    "h", "help"     , "show help"                                     );
+    options.optflag(    "v", "version"  , "print version number"                          );
     options
 }
 
@@ -301,7 +308,11 @@ impl Entry {
         };
 
         // calculate color
-        let color = if !cfg.ascii_flag {color_from_path(path, &cfg.color_dict)} else {None};
+        let color = if !cfg.ascii_flag {
+            if let Some( col ) = color_from_path(path, &cfg.color_dict) {
+                Some( col.to_string() ) // TODO use references
+            } else { None }
+        } else { None };
 
         Entry { name, bytes, color, last: false, entries }
     }
@@ -445,15 +456,15 @@ fn get_bytes( path: &Path, usage_flag : bool ) -> u64 {
     }
 }
 
-fn color_from_path( path : &Path, color_dict : &Vec<DictEntry> ) -> Option<String> {
+fn color_from_path<'a>( path : &Path, color_dict : &'a Dict<String> ) -> Option<&'a str> {
     if try_is_symlink( path ) {
         if path.read_link().unwrap().exists() {
-            if let Some( col ) = dict_get( color_dict, "ln" ) {
-                return Some( col.to_string() );
+            if let Some( col ) = color_dict.get( "ln" ) {
+                return Some( &col );
             }
         } else {
-            if let Some( col ) = dict_get( color_dict, "or" ) {
-                return Some( col.to_string() );
+            if let Some( col ) = color_dict.get( "or" )  {
+                return Some( &col );
             }
         }
     }
@@ -462,17 +473,17 @@ fn color_from_path( path : &Path, color_dict : &Vec<DictEntry> ) -> Option<Strin
         let mode = metadata.unwrap().st_mode();
         if path.is_dir() {
             if mode & 0o002 != 0 {  // dir other writable
-                if let Some( col ) = dict_get( color_dict, "ow" ) {
-                    return Some( col.to_string() );
+                if let Some( col ) = color_dict.get( "ow" ) {
+                    return Some( &col );
                 }
             }
-            if let Some( col ) = dict_get( color_dict, "di" ) {
-                return Some( col.to_string() );
+            if let Some( col ) = color_dict.get( "di" ) {
+                return Some( &col );
             }
         }
         if mode & 0o111 != 0 {  // executable
-            if let Some( col ) = dict_get( color_dict, "ex" ) {
-                return Some( col.to_string() );
+            if let Some( col ) = color_dict.get( "ex" ) {
+                return Some( &col );
             }
         }
     }
@@ -481,19 +492,19 @@ fn color_from_path( path : &Path, color_dict : &Vec<DictEntry> ) -> Option<Strin
             if &col.key[..2] != "*." { continue }
             let key = col.key.trim_left_matches( "*." );
             if ext_str == key {
-                return Some( dict_get( color_dict, col.key.as_str() ).unwrap().to_string() );
+                return Some( &color_dict.get( col.key.as_str() ).unwrap() );
             }
         }
     }
     if path.is_file() {
-        if let Some( col ) = dict_get( color_dict, "fi" ) {
-            return Some( col.to_string() );
+        if let Some( col ) = color_dict.get( "fi" ) {
+            return Some( &col );
         }
         else { return None }
     }
     // we are assuming it can only be a 'bd','cd'. can also be 'pi','so' or 'no'
-    if let Some( col ) = dict_get( color_dict, "bd" ) {
-        return Some( col.to_string() );
+    if let Some( col ) = color_dict.get( "bd" ) {
+        return Some( &col );
     }
     None
 }
@@ -503,17 +514,8 @@ fn print_usage( program: &str, opts: &Options ) {
     print!( "{}", opts.usage( &brief ) );
 }
 
-fn dict_get( dict : &Vec<DictEntry>, key : &str ) -> Option<String> {
-    for entry in dict {
-        if &entry.key == key {
-            return Some( entry.val.clone() );
-        }
-    }
-    None
-}
-
-fn create_color_dict() -> Vec<DictEntry> {
-    let mut color_dict = Vec::new();
+fn create_color_dict() -> Dict<String> {
+    let mut color_dict = Dict::<String>::new();
     let env_str = env::var("LS_COLORS").unwrap_or( "".to_string() );
     for entry in env_str.split(':') {
         if entry.len() == 0 { break; }
@@ -523,7 +525,7 @@ fn create_color_dict() -> Vec<DictEntry> {
         let key      = line.next().unwrap();
         let val      = line.next().unwrap();
 
-        color_dict.push( DictEntry{ key: key.to_string(), val: val.to_string() } );
+        color_dict.add( key.to_string(), val.to_string() );
     }
     color_dict
 }
@@ -562,14 +564,14 @@ mod tests {
 
     #[test]
     fn parse_ls_colors() {
-        let mut dict = Vec::new();
-        dict.push( DictEntry{ key: "di".to_string()   , val: "dircode".to_string() } );
-        dict.push( DictEntry{ key: "li".to_string()   , val: "linkcod".to_string() } );
-        dict.push( DictEntry{ key: "*.mp3".to_string(), val: "mp3code".to_string() } );
-        dict.push( DictEntry{ key: "*.tar".to_string(), val: "tarcode".to_string() } );
-        assert_eq!( "dircode", color_from_path( Path::new(".")       , &dict ) );
-        assert_eq!( "mp3code", color_from_path( Path::new("test.mp3"), &dict ) );
-        assert_eq!( "tarcode", color_from_path( Path::new("test.tar"), &dict ) );
+        let mut dict_ = Vec::new();
+        dict_.push( DictEntry{ key: "di".to_string()   , val: "dircode".to_string() } );
+        dict_.push( DictEntry{ key: "li".to_string()   , val: "linkcod".to_string() } );
+        dict_.push( DictEntry{ key: "*.mp3".to_string(), val: "mp3code".to_string() } );
+        dict_.push( DictEntry{ key: "*.tar".to_string(), val: "tarcode".to_string() } );
+        assert_eq!( "dircode", color_from_path( Path::new(".")       , &dict_ ) );
+        assert_eq!( "mp3code", color_from_path( Path::new("test.mp3"), &dict_ ) );
+        assert_eq!( "tarcode", color_from_path( Path::new("test.tar"), &dict_ ) );
     }
 
     /*

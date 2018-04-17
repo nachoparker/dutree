@@ -86,8 +86,6 @@ pub struct Config {
     exclude     : Vec<String>,
 }
 
-//struct DictEntry { key : String, val : String }
-
 fn init_opts() -> Options {
     let mut options = Options::new();
 
@@ -567,14 +565,14 @@ mod tests {
 
     #[test]
     fn parse_ls_colors() {
-        let mut dict_ = Vec::new();
-        dict_.push( DictEntry{ key: "di".to_string()   , val: "dircode".to_string() } );
-        dict_.push( DictEntry{ key: "li".to_string()   , val: "linkcod".to_string() } );
-        dict_.push( DictEntry{ key: "*.mp3".to_string(), val: "mp3code".to_string() } );
-        dict_.push( DictEntry{ key: "*.tar".to_string(), val: "tarcode".to_string() } );
-        assert_eq!( "dircode", color_from_path( Path::new(".")       , &dict_ ) );
-        assert_eq!( "mp3code", color_from_path( Path::new("test.mp3"), &dict_ ) );
-        assert_eq!( "tarcode", color_from_path( Path::new("test.tar"), &dict_ ) );
+        let mut dict = Dict::<String>::new();
+        dict.add( "di".to_string(), "dircode".to_string() );
+        dict.add( "li".to_string(), "linkcod".to_string() );
+        dict.add( "*.mp3".to_string(), "mp3code".to_string() );
+        dict.add( "*.tar".to_string(), "tarcode".to_string() );
+        assert_eq!( "dircode", color_from_path( Path::new(".")       , &dict ).unwrap() );
+        assert_eq!( "mp3code", color_from_path( Path::new("test.mp3"), &dict ).unwrap() );
+        assert_eq!( "tarcode", color_from_path( Path::new("test.tar"), &dict ).unwrap() );
     }
 
     /*
@@ -592,25 +590,6 @@ mod tests {
     #[test]
     fn path_flavours() {
     // different paths, like . .. ../x /home/ dir / /usr/etc/../bin
-    }
-
-    #[test]
-    fn entry_object() {
-        let dir   = fs::read_dir(".").unwrap().nth(0).unwrap().unwrap();
-        let entry = Entry::new(None, &dir, true, 0, false);
-        println!( "entry created {} {}B", entry.name, entry.bytes );
-        assert_eq!( ".git", entry.name );
-    }
-
-    #[test]
-    fn vector_of_entries() {
-        let mut vec : Vec<Entry> = Vec::new();
-        let entry = Entry { name: String::from("file1"), bytes: 1, dir: None };
-        vec.push( entry );
-        let entry = Entry { name: String::from("file2"), bytes: 2, dir: None };
-        vec.push( entry );
-        vec.sort_unstable_by(|a, b| b.bytes.cmp(&a.bytes));
-        assert!( vec[0].bytes == 2 );
     }
 
     #[test]

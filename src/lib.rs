@@ -51,7 +51,10 @@ use dict::{ Dict, DictIface };
 use std::io;
 use std::path::{Path, PathBuf};
 use std::fs;
+#[cfg(target_os = "linux")]
 use std::os::linux::fs::MetadataExt;
+#[cfg(target_os = "macos")]
+use std::os::unix::fs::MetadataExt;
 use std::env;
 
 const VERSTR    : &str = "v0.2.0";
@@ -225,7 +228,10 @@ fn try_read_dir( path : &Path ) -> Option<fs::ReadDir> {
 fn try_bytes_from_path( path : &Path, usage_flag : bool ) -> u64 {
 
     match path.symlink_metadata() {
+        #[cfg(target_os = "linux")]
         Ok(metadata) => if usage_flag { metadata.st_blocks()*512 } else { metadata.st_size() },
+        #[cfg(target_os = "macos")]
+        Ok(metadata) => if usage_flag { metadata.blocks()*512 } else { metadata.size() },
         Err(err)     => { 
             print_io_error( path, err );
             0
@@ -471,7 +477,10 @@ fn color_from_path<'a>( path : &Path, color_dict : &'a Dict<String> ) -> Option<
     }
     let metadata = path.symlink_metadata();
     if metadata.is_ok() {
+        #[cfg(target_os = "linux")]
         let mode = metadata.unwrap().st_mode();
+        #[cfg(target_os = "macos")]
+        let mode = metadata.unwrap().mode();
         if path.is_dir() {
             if mode & 0o002 != 0 {  // dir other writable
                 if let Some( col ) = color_dict.get( "ow" ) {

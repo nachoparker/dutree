@@ -45,14 +45,12 @@ use terminal_size::{Width, Height, terminal_size};
 extern crate regex;
 use regex::Regex;
 
-extern crate dict;
-use dict::{ Dict, DictIface };
-
 use std::io;
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::os::linux::fs::MetadataExt;
 use std::env;
+use std::collections::HashMap;
 
 const VERSTR    : &str = "v0.2.0";
 const DEF_WIDTH : u16  = 80;
@@ -64,17 +62,17 @@ pub enum XResult<T,S> {
 }
 use XResult::{XOk, XExit, XErr};
 
-struct Entry {
+struct Entry<'a> {
     name    : String,
     bytes   : u64,
-    color   : Option<String>, // TODO reference
+    color   : Option<&'a str>,
     last    : bool,
-    entries : Option<Vec<Entry>>,
+    entries : Option<Vec<Entry<'a>>>,
 }
 
 pub struct Config {
     paths       : Vec<PathBuf>,
-    color_dict  : Dict<String>,
+    color_dict  : HashMap<String, String>,
     depth       : u8,
     depth_flag  : bool,
     bytes_flag  : bool,
@@ -249,8 +247,8 @@ fn print_io_error( path: &Path, err: io::Error ) {
     eprintln!( "Couldn't read {} ({:?})", file_name_from_path( path ), err.kind() )
 }
 
-impl Entry {
-    fn new( path: &Path, cfg : &Config, depth : u8 ) -> Entry {
+impl<'a> Entry<'a> {
+    fn new( path: &Path, cfg : &'a Config, depth : u8 ) -> Entry<'a> {
         let name = file_name_from_path( path );
 
         // recursively create directory tree of entries up to depth
@@ -259,7 +257,7 @@ impl Entry {
         let entries = if path.is_dir() && ( !cfg.depth_flag || depth > 0 ) {
             let mut aggr_bytes = 0;
             if let Some( dir_list ) = try_read_dir( path ) {
-                let mut vec : Vec<Entry> = Vec::new();
+                let mut vec : Vec<Entry> = Vec::with_capacity( dir_list.size_hint().0 );
                 for entry in dir_list {
                     if let Some( path ) = path_from_dentry( entry ) {
                         let entry_name = &file_name_from_path(&path);
@@ -309,11 +307,7 @@ impl Entry {
         };
 
         // calculate color
-        let color = if !cfg.ascii_flag {
-            if let Some( col ) = color_from_path(path, &cfg.color_dict) {
-                Some( col.to_string() ) // TODO use references
-            } else { None }
-        } else { None };
+        let color = if !cfg.ascii_flag {color_from_path(path, &cfg.color_dict)} else {None};
 
         Entry { name, bytes, color, last: false, entries }
     }
@@ -457,14 +451,14 @@ fn get_bytes( path: &Path, usage_flag : bool ) -> u64 {
     }
 }
 
-fn color_from_path<'a>( path : &Path, color_dict : &'a Dict<String> ) -> Option<&'a str> {
+fn color_from_path<'a>( path : &Path, color_dict : &'a HashMap<String, String> ) -> Option<&'a str> {
     if try_is_symlink( path ) {
         if path.read_link().unwrap().exists() {
-            if let Some( col ) = color_dict.get( "ln" ) {
+            if let Some( col ) = color_dict.get( &"ln".to_string() ) {
                 return Some( &col );
             }
         } else {
-            if let Some( col ) = color_dict.get( "or" )  {
+            if let Some( col ) = color_dict.get( &"or".to_string() )  {
                 return Some( &col );
             }
         }
@@ -474,37 +468,37 @@ fn color_from_path<'a>( path : &Path, color_dict : &'a Dict<String> ) -> Option<
         let mode = metadata.unwrap().st_mode();
         if path.is_dir() {
             if mode & 0o002 != 0 {  // dir other writable
-                if let Some( col ) = color_dict.get( "ow" ) {
+                if let Some( col ) = color_dict.get( &"ow".to_string() ) {
                     return Some( &col );
                 }
             }
-            if let Some( col ) = color_dict.get( "di" ) {
+            if let Some( col ) = color_dict.get( &"di".to_string() ) {
                 return Some( &col );
             }
         }
         if mode & 0o111 != 0 {  // executable
-            if let Some( col ) = color_dict.get( "ex" ) {
+            if let Some( col ) = color_dict.get( &"ex".to_string() ) {
                 return Some( &col );
             }
         }
     }
     if let Some( ext_str ) = path.extension() {
-        for col in color_dict {
-            if &col.key[..2] != "*." { continue }
-            let key = col.key.trim_left_matches( "*." );
-            if ext_str == key {
-                return Some( &color_dict.get( col.key.as_str() ).unwrap() );
+        for ( key , _ ) in color_dict {
+            if &key[..2] != "*." { continue }
+            let k = key.trim_left_matches( "*." );
+            if ext_str == k {
+                return Some( &color_dict.get( key ).unwrap() );
             }
         }
     }
     if path.is_file() {
-        if let Some( col ) = color_dict.get( "fi" ) {
+        if let Some( col ) = color_dict.get( &"fi".to_string() ) {
             return Some( &col );
         }
         else { return None }
     }
     // we are assuming it can only be a 'bd','cd'. can also be 'pi','so' or 'no'
-    if let Some( col ) = color_dict.get( "bd" ) {
+    if let Some( col ) = color_dict.get( &"bd".to_string() ) {
         return Some( &col );
     }
     None
@@ -515,18 +509,19 @@ fn print_usage( program: &str, opts: &Options ) {
     print!( "{}", opts.usage( &brief ) );
 }
 
-fn create_color_dict() -> Dict<String> {
-    let mut color_dict = Dict::<String>::new();
+fn create_color_dict() -> HashMap<String, String> {
     let env_str = env::var("LS_COLORS").unwrap_or( "".to_string() );
-    for entry in env_str.split(':') {
+    let colors  = env_str.split(':');
+    let mut color_dict = HashMap::with_capacity( colors.size_hint().0 );
+    for entry in colors {
         if entry.len() == 0 { break; }
 
-        let     line = entry.replace("\"","");
+        let     line = entry.replace( "\"", "" );
         let mut line = line.split('=');
         let key      = line.next().unwrap();
         let val      = line.next().unwrap();
 
-        color_dict.add( key.to_string(), val.to_string() );
+        color_dict.insert( key.to_string(), val.to_string() );
     }
     color_dict
 }
@@ -536,7 +531,7 @@ pub fn run( cfg: &Config ) {
         Entry::new( cfg.paths[0].as_path(), &cfg, cfg.depth + 1 )
     } else {
         let mut bytes = 0;
-        let mut entries : Vec<Entry> = Vec::new();
+        let mut entries : Vec<Entry> = Vec::with_capacity( cfg.paths.len() );
 
         for path in &cfg.paths {
             let e = Entry::new( path.as_path(), &cfg, cfg.depth + 1 );
@@ -565,11 +560,11 @@ mod tests {
 
     #[test]
     fn parse_ls_colors() {
-        let mut dict = Dict::<String>::new();
-        dict.add( "di".to_string(), "dircode".to_string() );
-        dict.add( "li".to_string(), "linkcod".to_string() );
-        dict.add( "*.mp3".to_string(), "mp3code".to_string() );
-        dict.add( "*.tar".to_string(), "tarcode".to_string() );
+        let mut dict = HashMap::<String, String>::new();
+        dict.insert( "di".to_string(), "dircode".to_string() );
+        dict.insert( "li".to_string(), "linkcod".to_string() );
+        dict.insert( "*.mp3".to_string(), "mp3code".to_string() );
+        dict.insert( "*.tar".to_string(), "tarcode".to_string() );
         assert_eq!( "dircode", color_from_path( Path::new(".")       , &dict ).unwrap() );
         assert_eq!( "mp3code", color_from_path( Path::new("test.mp3"), &dict ).unwrap() );
         assert_eq!( "tarcode", color_from_path( Path::new("test.tar"), &dict ).unwrap() );

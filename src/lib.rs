@@ -35,6 +35,10 @@
 //!
 
 extern crate unicode_width;
+use unicode_width::UnicodeWidthStr;
+
+extern crate unicode_segmentation;
+use unicode_segmentation::UnicodeSegmentation;
 
 extern crate getopts;
 use getopts::Options;
@@ -324,10 +328,21 @@ impl<'a> Entry<'a> {
                 let tree_width = (open_parents.len() + 1) * 3; // 3 chars per tree branch
                 if tree_name_width >= tree_width {
                     let name_width  = tree_name_width - tree_width;
-                    let length = unicode_width::UnicodeWidthStr::width(entry.name.as_str());
+                    let length = UnicodeWidthStr::width(entry.name.as_str());
 
-                    let mut name = entry.name.clone();
-                    name.truncate( name_width );
+                    // truncate Unicode string to name_width
+                    let graphemes = UnicodeSegmentation::graphemes( entry.name.as_str(), true );
+                    let mut i   = 0;
+                    let mut vec = Vec::new();
+                    for cluster in graphemes {
+                        let w = UnicodeWidthStr::width( cluster );
+                        if i + w <= name_width {
+                            i += w;
+                            vec.push( cluster );
+                        }
+                    }
+                    let mut name = String::new();
+                    vec.iter().for_each( |cluster| name.push_str( cluster ) );
 
                     // surround name by ANSII color escape sequences
                     if let Some( ref col_str ) = entry.color {

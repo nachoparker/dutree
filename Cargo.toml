@@ -1,6 +1,6 @@
 [package]
 name = "dutree"
-version = "0.2.5"
+version = "0.2.6"
 authors = ["nacho <nacho@ownyourbits.com>"]
 description = "Command line tool to analyze disk usage"
 repository = "https://github.com/nachoparker/dutree"

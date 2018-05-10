@@ -38,4 +38,6 @@ Options:
 cargo install dutree
 ```
 
+There's also standalone binaries in the [Releases section](https://github.com/nachoparker/dutree/releases)
+
 More details at [ownyourbits.com](https://ownyourbits.com/2018/03/25/analize-disk-usage-with-dutree)

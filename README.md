@@ -12,6 +12,8 @@ a tool to analyze file system usage written in Rust
  - ability to compare different directories
  - fast, written in Rust
 
+More details at [ownyourbits.com](https://ownyourbits.com/2018/03/25/analize-disk-usage-with-dutree).
+
 # Usage
 
 ```
@@ -38,6 +40,15 @@ Options:
 cargo install dutree
 ```
 
-There's also standalone binaries in the [Releases section](https://github.com/nachoparker/dutree/releases)
+There's also standalone binaries for Linux in the [Releases section](https://github.com/nachoparker/dutree/releases)
 
-More details at [ownyourbits.com](https://ownyourbits.com/2018/03/25/analize-disk-usage-with-dutree)
+## Arch Linux
+
+You can install [the AUR package](https://aur.archlinux.org/packages/dutree/)
+with an AUR helper like `pacaur`, or manually:
+
+```bash
+git clone https://aur.archlinux.org/dutree.git
+cd bat
+makepkg -si
+```

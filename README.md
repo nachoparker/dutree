@@ -45,7 +45,7 @@ There's also standalone binaries for Linux in the [Releases section](https://git
 ## Arch Linux
 
 You can install [the AUR package](https://aur.archlinux.org/packages/dutree/)
-with an AUR helper like `yaourt`, or manually:
+with an AUR helper like `pacaur`, or manually:
 
 ```bash
 git clone https://aur.archlinux.org/dutree.git

@@ -59,7 +59,7 @@ use std::os::unix::fs::MetadataExt;
 use std::env;
 use std::collections::HashMap;
 
-const VERSTR    : &str = "v0.2.7";
+const VERSTR    : &str = "v0.2.8";
 const DEF_WIDTH : u16  = 80;
 
 pub enum XResult<T,S> {
@@ -562,6 +562,7 @@ pub fn run( cfg: &Config ) {
             bytes += e.bytes;
             entries.push( e );
         }
+        entries.sort_unstable_by( |a, b| b.bytes.cmp( &a.bytes ) );
         let len = entries.len();
         if len > 0 {
             entries[len-1].last = true;

@@ -274,7 +274,7 @@ impl<'a> Entry<'a> {
 
                         // argument filters
                         if cfg.exclude.iter().any( |p| entry_name == p ){ continue }
-                        if cfg.hiddn_flag && &entry_name[..1] == "."    { continue }
+                        if cfg.hiddn_flag && entry_name.starts_with("."){ continue }
                         if cfg.no_dir_flg && path.is_dir()              { continue }
 
                         let entry = Entry::new( &path.as_path(), cfg, depth );

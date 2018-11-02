@@ -49,6 +49,6 @@ with an AUR helper like `pacaur`, or manually:
 
 ```bash
 git clone https://aur.archlinux.org/dutree.git
-cd bat
+cd dutree
 makepkg -si
 ```

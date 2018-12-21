@@ -49,7 +49,7 @@ fn main() {
         XExit     => process::exit(0),
         XErr(err) => {
             eprintln!( "{}", err );
-            process::exit(1) 
+            process::exit(1)
         }
     };
 

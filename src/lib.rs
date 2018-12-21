@@ -397,9 +397,9 @@ impl<'a> Entry<'a> {
             eprintln!("Unable to get terminal size");
         }
         let size_width      = 15;
-        let var_width       = twidth - size_width;
-        let bar_width       = var_width as usize * 75 / 100;
-        let tree_name_width = var_width as usize * 25 / 100;
+        let var_width       = (twidth - size_width) as usize;
+        let tree_name_width = 25.max(var_width * 25 / 100);
+        let bar_width = var_width - tree_name_width;
 
         // initalize
         let     open_parents : Vec<bool> = Vec::new();

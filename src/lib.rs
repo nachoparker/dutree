@@ -323,7 +323,8 @@ impl<'a> Entry<'a> {
     }
 
     fn print_entries( &self, open_parents : Vec<bool>, parent_vals : Vec<u64>,
-                      bytes_flag : bool, ascii_flag : bool, bar_width : usize, tree_name_width : usize ) {
+                      bytes_flag : bool, ascii_flag : bool,
+                      max_bytes : u64, bar_width : usize, tree_name_width : usize ) {
         if let Some(ref entries) = self.entries {
             for entry in entries {
                 let mut op    = open_parents.clone();
@@ -375,11 +376,11 @@ impl<'a> Entry<'a> {
                     // print it
                     println!( "{} {} {:>13}",
                               name,
-                              fmt_bar( &bytes, bar_width, ascii_flag ),
+                              fmt_bar( &bytes, max_bytes, bar_width, ascii_flag ),
                               fmt_size_str( entry.bytes, bytes_flag ) );
                     if let Some(_) = entry.entries {
                         entry.print_entries( op, bytes, bytes_flag, ascii_flag,
-                                             bar_width, tree_name_width );
+                                             max_bytes, bar_width, tree_name_width );
                     }
                 }
             }
@@ -404,23 +405,28 @@ impl<'a> Entry<'a> {
         // initalize
         let     open_parents : Vec<bool> = Vec::new();
         let mut parent_vals  : Vec<u64>  = Vec::new();
+        let max_bytes = match self.entries {
+            Some(ref entries) => entries.iter().map(|e| e.bytes).max().unwrap_or(self.bytes),
+            None => self.bytes,
+        };
         parent_vals.push( self.bytes );
 
         // print
         println!( "[ {} {} ]", self.name, fmt_size_str( self.bytes, bytes_flag ) );
         self.print_entries( open_parents, parent_vals, bytes_flag, ascii_flag,
-                            bar_width, tree_name_width );
+                            max_bytes, bar_width, tree_name_width );
     }
 }
 
-fn fmt_bar( bytes : &Vec<u64>, width : usize, ascii_flag : bool ) -> String {
+fn fmt_bar( bytes : &Vec<u64>, max_bytes : u64, width : usize, ascii_flag : bool ) -> String {
     let width = width as u64 - 2 - 5; // not including bars and percentage
 
     let mut str = String::with_capacity( width as usize );
     str.push( '│' );
 
     let mut bytesi = bytes.iter();
-    let mut total  = bytesi.next().unwrap();
+    let _ = bytesi.next();
+    let mut total  = &max_bytes;
     let mut part   = bytesi.next().unwrap();
     let mut bars   = ( part * width ) / total;
     let mut pos    = width - bars;

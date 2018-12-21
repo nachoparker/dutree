@@ -193,7 +193,7 @@ impl Config {
             aggr       = 1024u64.pow(2);
         }
 
-        XOk( Config{ paths, color_dict, depth, depth_flag, bytes_flag, 
+        XOk( Config{ paths, color_dict, depth, depth_flag, bytes_flag,
             usage_flag, hiddn_flag, ascii_flag, no_dir_flg,  aggr, exclude } )
     }
 }
@@ -220,7 +220,7 @@ fn try_read_dir( path : &Path ) -> Option<fs::ReadDir> {
     if try_is_symlink( path ) { return None } // don't follow symlinks
     match path.read_dir() {
         Ok(dir_list) => Some(dir_list),
-        Err(err)     => { 
+        Err(err)     => {
             print_io_error( path, err );
             None
         },
@@ -234,7 +234,7 @@ fn try_bytes_from_path( path : &Path, usage_flag : bool ) -> u64 {
         Ok(metadata) => if usage_flag { metadata.st_blocks()*512 } else { metadata.st_size() },
         #[cfg(target_os = "macos")]
         Ok(metadata) => if usage_flag { metadata.blocks()*512 } else { metadata.size() },
-        Err(err)     => { 
+        Err(err)     => {
             print_io_error( path, err );
             0
         },
@@ -287,7 +287,7 @@ impl<'a> Entry<'a> {
                 }
                 vec.sort_unstable_by( |a, b| b.bytes.cmp( &a.bytes ) );
                 if aggr_bytes > 0 {
-                    vec.push( Entry { 
+                    vec.push( Entry {
                         name: "<aggregated>".to_string(),
                         bytes: aggr_bytes,
                         color: None,
@@ -322,8 +322,9 @@ impl<'a> Entry<'a> {
         Entry { name, bytes, color, last: false, entries }
     }
 
-    fn print_entries( &self, open_parents : Vec<bool>, parent_vals : Vec<u64>, 
-                      bytes_flag : bool, ascii_flag : bool, bar_width : usize, tree_name_width : usize ) {
+    fn print_entries( &self, open_parents : Vec<bool>, parent_vals : Vec<u64>,
+                      bytes_flag : bool, ascii_flag : bool,
+                      max_bytes : u64, bar_width : usize, tree_name_width : usize ) {
         if let Some(ref entries) = self.entries {
             for entry in entries {
                 let mut op    = open_parents.clone();
@@ -366,20 +367,20 @@ impl<'a> Entry<'a> {
 
                     // draw the tree
                     for open in &open_parents {
-                        if   *open { print!( "   " ); } 
+                        if   *open { print!( "   " ); }
                         else       { print!( "│  " ); }
                     }
                     if   entry.last { print!( "└─ " ); op.push( true  ); }
                     else            { print!( "├─ " ); op.push( false ); }
 
                     // print it
-                    println!( "{} {} {:>13}", 
+                    println!( "{} {} {:>13}",
                               name,
-                              fmt_bar( &bytes, bar_width, ascii_flag ),
+                              fmt_bar( &bytes, max_bytes, bar_width, ascii_flag ),
                               fmt_size_str( entry.bytes, bytes_flag ) );
                     if let Some(_) = entry.entries {
                         entry.print_entries( op, bytes, bytes_flag, ascii_flag,
-                                             bar_width, tree_name_width );
+                                             max_bytes, bar_width, tree_name_width );
                     }
                 }
             }
@@ -389,7 +390,7 @@ impl<'a> Entry<'a> {
     fn print( &self, bytes_flag : bool, ascii_flag : bool ) {
 
         // calculate plot widths
-        let mut twidth = DEF_WIDTH; 
+        let mut twidth = DEF_WIDTH;
         let size = terminal_size();
         if let Some( ( Width(w), Height(_h) ) ) = size {
             twidth = w;
@@ -397,30 +398,35 @@ impl<'a> Entry<'a> {
             eprintln!("Unable to get terminal size");
         }
         let size_width      = 15;
-        let var_width       = twidth - size_width;
-        let bar_width       = var_width as usize * 75 / 100;
-        let tree_name_width = var_width as usize * 25 / 100;
+        let var_width       = (twidth - size_width) as usize;
+        let tree_name_width = 25.max(var_width * 25 / 100);
+        let bar_width = var_width - tree_name_width;
 
         // initalize
         let     open_parents : Vec<bool> = Vec::new();
         let mut parent_vals  : Vec<u64>  = Vec::new();
+        let max_bytes = match self.entries {
+            Some(ref entries) => entries.iter().map(|e| e.bytes).max().unwrap_or(self.bytes),
+            None => self.bytes,
+        };
         parent_vals.push( self.bytes );
 
         // print
         println!( "[ {} {} ]", self.name, fmt_size_str( self.bytes, bytes_flag ) );
         self.print_entries( open_parents, parent_vals, bytes_flag, ascii_flag,
-                            bar_width, tree_name_width );
+                            max_bytes, bar_width, tree_name_width );
     }
 }
 
-fn fmt_bar( bytes : &Vec<u64>, width : usize, ascii_flag : bool ) -> String {
+fn fmt_bar( bytes : &Vec<u64>, max_bytes : u64, width : usize, ascii_flag : bool ) -> String {
     let width = width as u64 - 2 - 5; // not including bars and percentage
 
     let mut str = String::with_capacity( width as usize );
     str.push( '│' );
 
     let mut bytesi = bytes.iter();
-    let mut total  = bytesi.next().unwrap();
+    let _ = bytesi.next();
+    let mut total  = &max_bytes;
     let mut part   = bytesi.next().unwrap();
     let mut bars   = ( part * width ) / total;
     let mut pos    = width - bars;
@@ -567,7 +573,7 @@ pub fn run( cfg: &Config ) {
         if len > 0 {
             entries[len-1].last = true;
         }
-        Entry { 
+        Entry {
             name    : "<collection>".to_string(),
             bytes,
             color   : None,

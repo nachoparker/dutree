@@ -13,6 +13,8 @@
 //!     -s, --summary       equivalent to -da, or -d1 -a1M
 //!     -u, --usage         report real disk usage instead of file size
 //!     -b, --bytes         print sizes in bytes
+//!     -w, --write FILE    write data to file
+//!     -r, --read FILE     read data from file
 //!     -x, --exclude NAME  exclude matching files or directories
 //!     -H, --no-hidden     exclude hidden files
 //!     -A, --ascii         ASCII characters only, no colors
@@ -49,9 +51,14 @@ use terminal_size::{Width, Height, terminal_size};
 extern crate regex;
 use regex::Regex;
 
-use std::io;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
+extern crate serde_json;
+
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
-use std::fs;
+use std::fs::{self, File};
 #[cfg(target_os = "linux")]
 use std::os::linux::fs::MetadataExt;
 #[cfg(target_os = "macos")]
@@ -69,6 +76,7 @@ pub enum XResult<T,S> {
 }
 use XResult::{XOk, XExit, XErr};
 
+#[derive(Serialize, Deserialize)]
 struct Entry<'a> {
     name    : String,
     bytes   : u64,
@@ -89,6 +97,8 @@ pub struct Config {
     no_dir_flg  : bool,
     aggr        : u64,
     exclude     : Vec<String>,
+    read_files  : Vec<PathBuf>,
+    write_file  : Option<PathBuf>,
 }
 
 fn init_opts() -> Options {
@@ -99,6 +109,8 @@ fn init_opts() -> Options {
     options.optflag(    "s", "summary"  , "equivalent to -da, or -d1 -a1M"                );
     options.optflag(    "u", "usage"    , "report real disk usage instead of file size"   );
     options.optflag(    "b", "bytes"    , "print sizes in bytes"                          );
+    options.optopt(     "w", "write"    , "write data to file", "FILE"                    );
+    options.optmulti(   "r", "read"     , "read data from file", "FILE"                   );
     options.optflag(    "f", "files-only","skip directories for a fast local overview"    );
     options.optmulti(   "x", "exclude"  , "exclude matching files or directories", "NAME" );
     options.optflag(    "H", "no-hidden", "exclude hidden files"                          );
@@ -131,8 +143,11 @@ impl Config {
 
         let color_dict = create_color_dict();
 
+        let read_file_paths = opt.opt_strs("r");
+        let write_file_path = opt.opt_str("w");
+
         let mut paths : Vec<PathBuf> = Vec::new();
-        if opt.free.len() == 0 {
+        if opt.free.len() == 0 && read_file_paths.len() == 0 {
             let mut path = std::path::PathBuf::new();
             path.push( ".".to_string() );
             paths.push( path );
@@ -148,6 +163,28 @@ impl Config {
             if !p.exists() {
                 return XErr( format!( "path {} doesn't exist", p.display() ) );
             }
+        }
+
+        let mut read_files: Vec<PathBuf> = Vec::new();
+        for file_path in read_file_paths {
+            let mut path = std::path::PathBuf::new();
+            path.push( &file_path );
+            read_files.push( path );
+        };
+        for p in &read_files {
+            if !p.exists() {
+                return XErr( format!( "read-file {} doesn't exist", p.display() ) );
+            }
+        }
+
+        let mut write_file = None;
+        if let Some(file) = &write_file_path {
+            let mut path = std::path::PathBuf::new();
+            path.push( &file );
+            if path.exists() {
+                return XErr( format!( "write-file {} exist", path.display() ) );
+            }
+            write_file = Some(path);
         }
 
         let mut depth_flag = opt.opt_present("d");
@@ -194,7 +231,7 @@ impl Config {
         }
 
         XOk( Config{ paths, color_dict, depth, depth_flag, bytes_flag, 
-            usage_flag, hiddn_flag, ascii_flag, no_dir_flg,  aggr, exclude } )
+            usage_flag, hiddn_flag, ascii_flag, no_dir_flg,  aggr, exclude, read_files, write_file } )
     }
 }
 
@@ -551,7 +588,15 @@ fn create_color_dict() -> HashMap<String, String> {
 }
 
 pub fn run( cfg: &Config ) {
-    let entry = if cfg.paths.len() == 1 {
+    let mut files: Vec<Box<String>> = Vec::new();
+    for file in &cfg.read_files {
+        let mut contents = String::new();
+        let mut file = File::open( file ).expect( "file not found" );
+        file.read_to_string( &mut contents ).expect( "read failed" );
+        files.push( Box::new( contents ) );
+    }
+
+    let entry = if cfg.paths.len() == 1 && cfg.read_files.len() == 0{
         Entry::new( cfg.paths[0].as_path(), &cfg, cfg.depth + 1 )
     } else {
         let mut bytes = 0;
@@ -562,12 +607,17 @@ pub fn run( cfg: &Config ) {
             bytes += e.bytes;
             entries.push( e );
         }
+        files.iter().for_each( |file| {
+            let e: Entry = serde_json::from_str( file ).expect( "error while reading json" );
+            bytes += e.bytes;
+            entries.push( e );
+        });
         entries.sort_unstable_by( |a, b| b.bytes.cmp( &a.bytes ) );
         let len = entries.len();
         if len > 0 {
             entries[len-1].last = true;
         }
-        Entry { 
+        Entry {
             name    : "<collection>".to_string(),
             bytes,
             color   : None,
@@ -575,6 +625,11 @@ pub fn run( cfg: &Config ) {
             entries : Some(entries)
         }
     };
+    if let Some(file) = &cfg.write_file {
+        let json_file_path = Path::new( &file );
+        let json_file = File::create( json_file_path ).expect( "file not writable" );
+        serde_json::to_writer( json_file, &entry ).expect( "error while writing json" );
+    }
 
     entry.print( cfg.bytes_flag, cfg.ascii_flag );
 }

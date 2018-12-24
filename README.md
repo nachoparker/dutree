@@ -26,6 +26,8 @@ Options:
     -s, --summary       equivalent to -da, or -d1 -a1M
     -u, --usage         report real disk usage instead of file size
     -b, --bytes         print sizes in bytes
+    -w, --write FILE    write data to file
+    -r, --read FILE     read data from file
     -f, --files-only    skip directories for a fast local overview
     -x, --exclude NAME  exclude matching files or directories
     -H, --no-hidden     exclude hidden files

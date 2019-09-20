@@ -10,7 +10,7 @@ homepage = "https://ownyourbits.com/2018/03/25/analize-disk-usage-with-dutree/"
 exclude = ["test/*"]
 
 [dependencies]
-getopts = "0.2"
+getopts = "0.2.21"
 terminal_size = "0.1.7"
 regex = "0.2"
 unicode-width = "0.1.1"

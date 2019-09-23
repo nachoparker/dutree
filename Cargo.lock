@@ -10,7 +10,7 @@ dependencies = [
 
 [[package]]
 name = "dutree"
-version = "0.2.9"
+version = "0.2.10"
 dependencies = [
  "getopts 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",

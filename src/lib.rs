@@ -509,7 +509,7 @@ fn color_from_path<'a>( path : &Path, color_dict : &'a HashMap<String, String> )
     if let Some( ext_str ) = path.extension() {
         for ( key , _ ) in color_dict {
             if &key[..2] != "*." { continue }
-            let k = key.trim_left_matches( "*." );
+            let k = key.trim_start_matches( "*." );
             if ext_str == k {
                 return Some( &color_dict.get( key ).unwrap() );
             }

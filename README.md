@@ -52,3 +52,11 @@ git clone https://aur.archlinux.org/dutree.git
 cd dutree
 makepkg -si
 ```
+
+## Fedora
+
+You can install `dutree` from the official Fedora repositories:
+
+```sh
+$ sudo dnf -y install dutree
+```

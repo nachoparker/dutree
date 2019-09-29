@@ -395,7 +395,8 @@ impl<'a> Entry<'a> {
         if let Some( ( Width(w), Height(_h) ) ) = size {
             twidth = w;
         } else {
-            eprintln!("Unable to get terminal size");
+            // FIXME: doesn't seem to work when piping
+            // eprintln!("Unable to get terminal size");
         }
         let size_width      = 15;
         let var_width       = (twidth - size_width) as usize;

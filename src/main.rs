@@ -43,6 +43,10 @@ use dutree::XResult::XExit;
 use std::process;
 
 fn main() {
+
+    // handle SIGPIPE
+    let _signal = unsafe { signal_hook::register(signal_hook::SIGPIPE, || process::exit(0)) };
+
     // Parse arguments
     let cfg = match Config::new() {
         XOk(cfg)  => cfg,

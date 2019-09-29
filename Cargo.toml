@@ -1,6 +1,6 @@
 [package]
 name = "dutree"
-version = "0.2.11"
+version = "0.2.12"
 authors = ["nacho <nacho@ownyourbits.com>"]
 description = "Command line tool to analyze disk usage"
 repository = "https://github.com/nachoparker/dutree"
@@ -11,7 +11,8 @@ exclude = ["test/*"]
 
 [dependencies]
 getopts = "0.2.21"
-terminal_size = "0.1.7"
 regex = "1"
+signal-hook = "0.1.10"
+terminal_size = "0.1.8"
 unicode-width = "0.1.1"
 unicode-segmentation = "1.2.0"

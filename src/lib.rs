@@ -460,7 +460,7 @@ fn fmt_size_str( bytes : u64, flag : bool ) -> String {
     else if bytes < 1024u64.pow(2) { format!( "{:.2} KiB", b/1024.0                 ) }
     else if bytes < 1024u64.pow(3) { format!( "{:.2} MiB", b/(1024u32.pow(2) as f32)) }
     else if bytes < 1024u64.pow(4) { format!( "{:.2} GiB", b/(1024u32.pow(3) as f32)) }
-    else                           { format!( "{:.2} TiB", b/(1024u32.pow(4) as f32)) }
+    else                           { format!( "{:.2} TiB", b/(1024u64.pow(4) as f32)) }
 }
 
 fn get_bytes( path: &Path, usage_flag : bool ) -> u64 {

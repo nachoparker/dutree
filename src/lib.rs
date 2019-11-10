@@ -429,7 +429,10 @@ fn fmt_bar( bytes : &Vec<u64>, max_bytes : u64, width : usize, ascii_flag : bool
     let _ = bytesi.next();
     let mut total  = &max_bytes;
     let mut part   = bytesi.next().unwrap();
-    let mut bars   = ( part * width ) / total;
+    let mut bars = match total {
+        0 => 0,
+        _ => (part * width) / total,
+    };
     let mut pos    = width - bars;
 
     let block_char = if ascii_flag { vec![ ' ', '#' ] } else { vec![ ' ', '░', '▒', '▓', '█' ] };
@@ -451,7 +454,13 @@ fn fmt_bar( bytes : &Vec<u64>, max_bytes : u64, width : usize, ascii_flag : bool
         str.push( block_char[chr] );
     }
 
-    format!( "{}│ {:3}%", str, ( bytes[bytes.len()-1] * 100 ) / bytes[bytes.len()-2] )
+    let nominator = bytes[bytes.len()-1] * 100;
+    let denominator = bytes[bytes.len()-2];
+    let result = match denominator {
+        0 => 0,
+        _ =>  nominator/denominator,
+    };
+    format!( "{}│ {:3}%", str, result )
 }
 
 fn fmt_size_str( bytes : u64, flag : bool ) -> String {

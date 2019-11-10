@@ -481,14 +481,16 @@ fn get_bytes( path: &Path, usage_flag : bool ) -> u64 {
 
 fn color_from_path<'a>( path : &Path, color_dict : &'a HashMap<String, String> ) -> Option<&'a str> {
     if try_is_symlink( path ) {
-        if path.read_link().unwrap().exists() {
-            if let Some( col ) = color_dict.get( &"ln".to_string() ) {
-                return Some( &col );
+        let path_link = path.read_link();
+        if path_link.is_ok() {
+            if path_link.unwrap().exists() {
+                if let Some(col) = color_dict.get(&"ln".to_string()) {
+                    return Some(&col);
+                }
             }
-        } else {
-            if let Some( col ) = color_dict.get( &"or".to_string() )  {
-                return Some( &col );
-            }
+        }
+        if let Some( col ) = color_dict.get( &"or".to_string() )  {
+            return Some( &col );
         }
     }
     let metadata = path.symlink_metadata();

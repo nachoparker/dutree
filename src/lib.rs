@@ -443,8 +443,7 @@ fn fmt_bar( bytes : &Vec<u64>, max_bytes : u64, width : usize, ascii_flag : bool
         if x > pos {
             total = part;
             part  = bytesi.next().unwrap_or(&0);
-            bars  = ( part * bars ) / total;
-
+            bars = match total { 0 => 0, _ => (part * bars) / total };
             pos = width - bars;
             chr += 1;
             if chr == levels || chr >= block_char.len() {

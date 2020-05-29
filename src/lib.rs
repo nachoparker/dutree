@@ -59,7 +59,7 @@ use std::os::unix::fs::MetadataExt;
 use std::env;
 use std::collections::HashMap;
 
-const VERSTR    : &str = "v0.2.9";
+const VERSTR    : &str = "v0.2.15";
 const DEF_WIDTH : u16  = 80;
 
 pub enum XResult<T,S> {

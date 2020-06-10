@@ -52,6 +52,8 @@ use regex::Regex;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::fs;
+#[cfg(target_os = "freebsd")]
+use std::os::freebsd::fs::MetadataExt;
 #[cfg(target_os = "linux")]
 use std::os::linux::fs::MetadataExt;
 #[cfg(target_os = "macos")]
@@ -230,7 +232,7 @@ fn try_read_dir( path : &Path ) -> Option<fs::ReadDir> {
 fn try_bytes_from_path( path : &Path, usage_flag : bool ) -> u64 {
 
     match path.symlink_metadata() {
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "freebsd", target_os = "linux"))]
         Ok(metadata) => if usage_flag { metadata.st_blocks()*512 } else { metadata.st_size() },
         #[cfg(target_os = "macos")]
         Ok(metadata) => if usage_flag { metadata.blocks()*512 } else { metadata.size() },
@@ -503,7 +505,7 @@ fn color_from_path<'a>( path : &Path, color_dict : &'a HashMap<String, String> )
     }
     let metadata = path.symlink_metadata();
     if metadata.is_ok() {
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "freebsd", target_os = "linux"))]
         let mode = metadata.unwrap().st_mode();
         #[cfg(target_os = "macos")]
         let mode = metadata.unwrap().mode();

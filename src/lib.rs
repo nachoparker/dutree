@@ -61,7 +61,7 @@ use std::os::unix::fs::MetadataExt;
 use std::env;
 use std::collections::HashMap;
 
-const VERSTR    : &str = "v0.2.17";
+const VERSTR    : &str = env!("CARGO_PKG_VERSION");
 const DEF_WIDTH : u16  = 80;
 
 pub enum XResult<T,S> {

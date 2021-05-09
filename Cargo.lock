@@ -17,7 +17,7 @@ checksum = "4d25d88fd6b8041580a654f9d0c581a047baee2b3efee13275f2fc392fc75034"
 
 [[package]]
 name = "dutree"
-version = "0.2.16"
+version = "0.2.18"
 dependencies = [
  "getopts",
  "regex",

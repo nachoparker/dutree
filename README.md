@@ -60,3 +60,11 @@ You can install `dutree` from the official Fedora repositories:
 ```sh
 $ sudo dnf -y install dutree
 ```
+
+## Guix
+
+You can install `dutree` in Guix:
+
+```sh
+$ guix install dutree
+```

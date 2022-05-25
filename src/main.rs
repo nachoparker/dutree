@@ -45,7 +45,7 @@ use std::process;
 fn main() {
 
     // handle SIGPIPE
-    let _signal = unsafe { signal_hook::register(signal_hook::SIGPIPE, || process::exit(0)) };
+    let _signal = unsafe { signal_hook::low_level::register(signal_hook::consts::signal::SIGPIPE, || process::exit(0)) };
 
     // Parse arguments
     let cfg = match Config::new() {
